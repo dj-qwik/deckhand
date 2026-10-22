@@ -5,7 +5,7 @@ import { makeBot, botThink } from '../game/sim/bots.js';
 import { W, H, TPS, WEAPONS } from '../game/sim/rules.js';
 
 const SEND_EVERY = 2; // ticks between snapshots (10 Hz)
-const MAX_MSGS_PER_SEC = 60;
+const MAX_MSGS_PER_SEC = 150; // held build strokes send one placement per cell
 
 const ALLOWED = {
   place: ['piece', 'x', 'y', 'rot'], undo: [], repair: ['x', 'y'], crane: ['x', 'y', 'x2', 'y2'], buyGun: ['w', 'x', 'y'],

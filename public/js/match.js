@@ -105,7 +105,7 @@ export class Match {
     this.lastPhase = p;
     this.audio.setIntensity(p === 'fire' ? 1 : 0);
     if (p === 'weld') { this.setTool({ mode: 'piece', piece: this.tool.piece || 'brace' }); this.banner(`Round ${snap.cycle}: weld your walls`); this.crew.say('weld'); this.audio.play('klaxon'); }
-    if (p === 'arm') { this.setTool({ mode: 'buy', weapon: null }); this.banner('Arm up: bolt turrets inside your walls'); this.crew.say('arm'); }
+    if (p === 'arm') { this.setTool({ mode: 'buy', weapon: 'mortar', gun: null }); this.banner('Arm up: bolt turrets inside your walls'); this.crew.say('arm'); }
     if (p === 'fire') { this.setTool({ mode: 'aim' }); this.banner(`Round ${snap.cycle}: FIRE`, true); this.crew.say('fire', { force: true }); this.audio.play('klaxon'); }
     if (p === 'cease') { this.setTool({ mode: 'none' }); this.send({ t: 'fire', on: false }); this.mouse.down = false; }
     if (p === 'done') this.setTool({ mode: 'none' });
@@ -521,6 +521,29 @@ export class Match {
     this.mouse.f = [fx, fy];
     const cx = Math.floor(fx), cy = Math.floor(fy);
     this.mouse.cell = cx >= 0 && cy >= 0 && cx < W && cy < H ? [cx, cy] : null;
+    if (this.draw && this.mouse.down && this.mouse.cell) this.drawTo(this.mouse.cell);
+  }
+
+  /** extend a held build stroke to `cell` along an edge-connected path (no diagonal leaks) */
+  drawTo([tx, ty]) {
+    const d = this.draw;
+    let [x, y] = d.last;
+    if (x === tx && y === ty) return;
+    const me = this.snapCur.players[this.me];
+    window.__dhQuietUntil = performance.now() + 600; // don't toast "blocked" for every cell of a stroke
+    let n = 0;
+    while ((x !== tx || y !== ty) && n++ < 40) {
+      const dx = tx - x, dy = ty - y;
+      if (Math.abs(dx) >= Math.abs(dy)) x += Math.sign(dx); else y += Math.sign(dy);
+      const i = y * W + x;
+      if (d.done.has(i)) continue;
+      d.done.add(i);
+      if (!this.cellFreeMine(i)) continue;
+      if (d.kind === 'wall') this.send({ t: 'place', piece: 'block', x, y, rot: 0 });
+      else if (this.enclosedBy[i] === this.me) this.send({ t: 'buyGun', w: d.w, x, y });
+    }
+    d.last = [tx, ty];
+    void me;
   }
 
   sendAim(force) {
@@ -549,7 +572,12 @@ export class Match {
     if (e.button !== 0) return;
     if (snap.phase === 'weld' && c) {
       const [x, y] = c;
-      if (this.tool.mode === 'piece') this.send({ t: 'place', piece: this.tool.piece, x, y, rot: this.tool.rot });
+      if (this.tool.mode === 'piece') {
+        // click = drop the selected piece; keep holding and move to draw single blocks
+        this.send({ t: 'place', piece: this.tool.piece, x, y, rot: this.tool.rot });
+        this.mouse.down = true;
+        this.draw = { kind: 'wall', last: [x, y], done: new Set([y * W + x]) };
+      }
       else if (this.tool.mode === 'repair') {
         this.send({ t: 'repair', x, y });
         this.mouse.down = true;
@@ -563,7 +591,12 @@ export class Match {
       const g = snap.guns.find((q) => q[3] === x && q[4] === y && q[1] === this.me);
       if (g) { this.setTool({ mode: 'move', gun: g[0], weapon: null }); return; }
       if (this.tool.gun) { this.send({ t: 'moveGun', id: this.tool.gun, x, y }); this.setTool({ mode: 'buy', gun: null }); }
-      else if (this.tool.weapon) this.send({ t: 'buyGun', w: this.tool.weapon, x, y });
+      else if (this.tool.weapon) {
+        // click = one turret; hold and move to lay a line of them
+        this.send({ t: 'buyGun', w: this.tool.weapon, x, y });
+        this.mouse.down = true;
+        this.draw = { kind: 'gun', w: this.tool.weapon, last: [x, y], done: new Set([y * W + x]) };
+      }
     } else if (snap.phase === 'fire') {
       if (this.tool.ability && c) {
         this.send({ t: 'ability', id: this.tool.ability, x: c[0], y: c[1] });
@@ -580,6 +613,7 @@ export class Match {
     if (e.button === 1) { this.drag = null; return; }
     if (e.button !== 0) return;
     clearInterval(this.repairRepeat);
+    this.draw = null;
     if (this.mouse.down && this.snapCur?.phase === 'fire') this.send({ t: 'fire', on: false });
     this.mouse.down = false;
   }

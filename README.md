@@ -1,6 +1,6 @@
 # DECKHAND: Zero-G Rampart
 
-A real-money browser siege game. Two to four crews each get a yard with a reactor. Every match is two rounds: **build** (20 s weld walls, 8 s arm turrets), then **30 s of fire**. Seal your reactor inside an unbroken ring of walls, bolt turrets onto the floor you've enclosed, and flatten everyone else.
+A real-money browser siege game. Two to four crews each get a yard with a reactor. Every match is two rounds: **build** (30 s weld walls, 30 s arm turrets), then **30 s of fire**. Hold the button to draw walls block by block, or to lay a line of mortars. Seal your reactor inside an unbroken ring of walls, bolt turrets onto the floor you've enclosed, and flatten everyone else.
 
 **Winning:** after two rounds the crew with the most base left wins. Base = reactor HP + every wall cell and turret still standing. A destroyed reactor is out, whatever else stands. Ties go to reactor HP, then damage dealt to reactors, then total damage dealt, then a seeded draw.
 

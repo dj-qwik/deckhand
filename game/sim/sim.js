@@ -135,7 +135,8 @@ export function createMatch(cfg) {
       addGun(S, p.slot, 'rivet', p.rx + 1, gy);
       addGun(S, p.slot, 'mortar', p.rx + toCentre, gy);
     }
-    p.active = S.guns.find((g) => g.owner === p.slot).id;
+    // everyone starts on the lobbing mortar: it arcs over walls onto the other yards
+    p.active = S.guns.find((g) => g.owner === p.slot && g.w === 'mortar').id;
   }
   recomputeEnclosure(S);
   return S;

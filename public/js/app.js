@@ -126,7 +126,7 @@ const wsSend = (m) => { if (app.ws && app.wsReady) app.ws.send(JSON.stringify(m)
 function onWs(m) {
   if (m.t === 'start') return startMatch(m);
   if (m.t === 'snap') return app.match && app.match.onSnap(m.snap);
-  if (m.t === 'nope') { if (m.why && !/aim/.test(m.a)) { audio.play('nope'); toast(m.why); } return; }
+  if (m.t === 'nope') { if (m.why && !/aim/.test(m.a) && !(performance.now() < (window.__dhQuietUntil || 0))) { audio.play('nope'); toast(m.why); } return; }
   if (m.t === 'lobby') return onLobby(m.lobby);
   if (m.t === 'hello') { if (m.lobby) onLobby(m.lobby); return; }
   if (m.t === 'void') { toast(`Match voided: ${m.reason}. Everyone is refunded.`); return; }
@@ -461,9 +461,9 @@ class Tutorial {
     this.text = '';
     this.wallsDown = 0;
     this.steps = [
-      { text: 'Step 1 of 5. WELD phase: pick the Straight brace (key 1) and build a ring of wall around your reactor AND your two guns. Right-click rotates.', done: (m, s, me) => me.territory > 0 },
+      { text: 'Step 1 of 5. WELD phase: hold the mouse button and drag to draw a ring of wall around your reactor AND your two guns. A quick click drops the selected piece; right-click rotates.', done: (m, s, me) => me.territory > 0 },
       { text: 'Step 2 of 5. The green floor is enclosed. SEALED on your tile means your reactor is safe from direct hits. Wait for ARM.', done: (m, s) => s.phase === 'arm' || s.phase === 'fire' },
-      { text: 'Step 3 of 5. ARM phase: click Rivet Spitter in the shop, then click a green floor cell inside your walls.', done: (m, s, me) => s.guns.filter((g) => g[1] === m.me).length > 2 || s.phase === 'fire' },
+      { text: 'Step 3 of 5. ARM phase: the Scrap Mortar is already selected. Click green floor inside your walls, or hold and drag to lay a line of them.', done: (m, s, me) => s.guns.filter((g) => g[1] === m.me).length > 2 || s.phase === 'fire' },
       { text: 'Step 4 of 5. FIRE: aim at the enemy wall and hold left click. Knock a wall down. Keys 1–4 switch guns.', done: () => this.wallsDown > 0 },
       { text: 'Step 5 of 5. Damage earns credits. In the next build round, buy one Research upgrade on the left.', done: (m, s, me) => Object.keys(me.upgrades).length > 0 },
     ];
@@ -485,7 +485,8 @@ class Tutorial {
 // ============================================================ how to / settings
 function howTo() {
   modal(`<h2>How DECKHAND works</h2>
-  <p>Each match is two rounds. Every round is a <b>build</b> (weld walls for 20 s, then arm turrets for 8 s) followed by <b>30 seconds of fire</b>.</p>
+  <p>Each match is two rounds. Every round is a <b>build</b> (30 s to weld walls, then 30 s to arm turrets) followed by <b>30 seconds of fire</b>.</p>
+  <p><b>Quick building:</b> click to drop the selected piece. Hold the button and keep moving to draw a wall one block at a time. In the arm round the Scrap Mortar is pre-selected: click for one, or hold and drag to lay a whole artillery line. You start every match aiming your mortar, which lobs shells over the field onto the other yards.</p>
   <p>Your reactor is your castle. Seal it inside an unbroken ring of walls and it shrugs off 70% of splash damage and can't be hit by flat shots. A one-cell gap, or two walls that only touch at a corner, leaves it exposed.</p>
   <p>Enclosed floor is your territory. Turrets can only sit on it, and more floor unlocks more turrets and more scrap next round.</p>
   <p><b>Winning:</b> after two rounds the crew with the most base left wins. Base = reactor HP + every wall and turret HP still standing. Lose your reactor and you're out.</p>
@@ -495,7 +496,7 @@ function howTo() {
   <dt>Arm</dt><dd>Pick a turret in the shop, click green floor. Click your turret, then a cell, to move it. <kbd>X</kbd> sells.</dd>
   <dt>Fire</dt><dd>Aim with the mouse, hold left click. <kbd>1</kbd>–<kbd>4</kbd>/<kbd>Tab</kbd> switch guns. Click a crew tile or <kbd>T</kbd> to focus your auto-turrets.</dd>
   <dt>Abilities</dt><dd><kbd>Q</kbd> capacitor, <kbd>V</kbd> vent, <kbd>G</kbd> foam printer, <kbd>B</kbd> dirty tricks</dd>
-  <dt>Controller</dt><dd>Stick or D-pad moves the cursor. Weld: <kbd>A</kbd> place, <kbd>X</kbd> rotate, <kbd>LB</kbd>/<kbd>RB</kbd> piece, <kbd>B</kbd> undo, <kbd>Y</kbd> repair. Arm: <kbd>LB</kbd>/<kbd>RB</kbd> turret, <kbd>A</kbd> place or move, <kbd>Y</kbd> sell. Fire: <kbd>RT</kbd> fire, right stick fine-aim, <kbd>LB</kbd>/<kbd>RB</kbd> switch gun, <kbd>Y</kbd> auto-target, <kbd>LT</kbd> ability. <kbd>L3</kbd>/<kbd>R3</kbd> pick/buy upgrade. <kbd>Back</kbd> flatten, <kbd>Start</kbd> menu.</dd>
+  <dt>Controller</dt><dd>Stick or D-pad moves the cursor. Weld: <kbd>A</kbd> place (hold and move to draw walls), <kbd>X</kbd> rotate, <kbd>LB</kbd>/<kbd>RB</kbd> piece, <kbd>B</kbd> undo, <kbd>Y</kbd> repair. Arm: <kbd>LB</kbd>/<kbd>RB</kbd> turret, <kbd>A</kbd> place (hold and move to draw a line), or pick up one of yours and move it, <kbd>Y</kbd> sell. Fire: <kbd>RT</kbd> fire, right stick fine-aim, <kbd>LB</kbd>/<kbd>RB</kbd> switch gun, <kbd>Y</kbd> auto-target, <kbd>LT</kbd> ability. <kbd>L3</kbd>/<kbd>R3</kbd> pick/buy upgrade. <kbd>Back</kbd> flatten, <kbd>Start</kbd> menu.</dd>
   <dt>View</dt><dd><kbd>H</kbd> tactical flatten (low walls for precise clicking). Zoom with the wheel (<kbd>Ctrl</kbd>+wheel while welding) or <kbd>+</kbd>/<kbd>-</kbd>, pan with the middle mouse button or arrow keys, <kbd>0</kbd> resets.</dd></dl>
   <div class="row"><button class="btn" data-close>Got it</button></div>`);
 }

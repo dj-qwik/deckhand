@@ -11,8 +11,8 @@ export const TPS = 20; // authoritative ticks per second
 export const CYCLES = 2;
 export const DUR = {
   intro: 4 * TPS,
-  weld: 20 * TPS,
-  arm: 8 * TPS,
+  weld: 30 * TPS,
+  arm: 30 * TPS,
   fire: 30 * TPS,
   cease: 1 * TPS, // projectiles in flight finish; no new shots
 };
@@ -30,9 +30,9 @@ export const ENCLOSED_SPLASH_MULT = 30; // % of splash an enclosed reactor takes
 export const AUTO_DELAY = Math.round(1.5 * TPS); // auto turrets wait this long into FIRE
 export const AUTO_RELOAD_PCT = 160; // auto-fire reload is 1.6× slower than manual
 export const AUTO_SPREAD_PCT = 250;
-export const MAX_GUNS = 4;
+export const MAX_GUNS = 12;
 export const BASE_GUNS = 2; // turret cap = BASE_GUNS + enclosed floor / TERRITORY_PER_GUN, up to MAX_GUNS
-export const TERRITORY_PER_GUN = 24;
+export const TERRITORY_PER_GUN = 12;
 export const TERRITORY_PER_SCRAP = 8; // bonus scrap per this many enclosed cells at the next build round
 export const GUN_HP = 220;
 
@@ -45,9 +45,9 @@ export const YARDS = {
 };
 
 export const ECON = {
-  scrapStart: 42,
-  scrapPerCycle: 20,
-  scrapCap: 46,
+  scrapStart: 60,
+  scrapPerCycle: 30,
+  scrapCap: 70,
   creditsStart: 5,
   creditPerDamage: 80, // 1 credit per this much damage dealt
   creditCap: 15,
@@ -79,6 +79,7 @@ export const PIECES = {
   mesh: { name: 'Conductive mesh', cells: [[0, 0], [1, 0], [2, 0]], cost: 4, hp: 120, mat: 'mesh', key: '6' },
   foam: { name: 'Foam seal', cells: [[0, 0]], cost: 1, hp: 65, mat: 'foam', key: '7' },
   collar: { name: 'Reactor collar', cells: null, cost: 10, hp: 120, mat: 'steel', key: '8' }, // ring around reactor
+  block: { name: 'Wall block', cells: [[0, 0]], cost: 1, hp: 180, mat: 'steel', key: '9' }, // single cell: used when drawing walls
 };
 export const PIECE_IDS = Object.keys(PIECES);
 
@@ -114,7 +115,7 @@ export const WEAPONS = {
     blurb: 'Continuous cutting arc. Overheats; socket takes extra damage while firing.',
   },
   mortar: {
-    name: 'Scrap Mortar', kind: 'arc', cost: 6, dmg: 140, radius: c(1.6), dtype: 'explosive', speed: c(0.55),
+    name: 'Scrap Mortar', kind: 'arc', cost: 4, dmg: 140, radius: c(1.6), dtype: 'explosive', speed: c(0.55),
     reload: 60, spread: c(0.35), minT: 22, maxT: 46, hp: 1, prio: 'reactor',
     blurb: 'Lobs over walls. Splash. Can be shot down.',
   },
