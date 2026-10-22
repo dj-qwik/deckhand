@@ -4,6 +4,7 @@ import { W, H, FP, RS, TPS, DUR, CYCLES, PIECES, PIECE_IDS, pieceCells, WEAPONS,
 import { ARENAS } from '/sim/arenas.js';
 import { Renderer, PCOL, glyph } from './render.js';
 import { Crew } from './crew.js';
+import { pad, BTN } from './gamepad.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -223,7 +224,7 @@ export class Match {
     const L = $('#h-tools'), R = $('#h-right'), RS = $('#h-research');
     if (!me || !me.alive) { L.innerHTML = me && !me.alive ? '<p class="hint">Reactor destroyed. You are spectating.</p>' : ''; R.innerHTML = ''; RS.innerHTML = ''; return; }
     const ph = snap.phase;
-    const key = JSON.stringify([ph, me.scrap, me.credits, me.offer, me.bought, me.upgrades, me.undo, this.tool, me.cap, me.active, me.territory,
+    const key = JSON.stringify([this.padRes, pad.active, ph, me.scrap, me.credits, me.offer, me.bought, me.upgrades, me.undo, this.tool, me.cap, me.active, me.territory,
       snap.guns.filter((g) => g[1] === this.me).map((g) => [g[0], g[2], Math.round(g[7] / 3), g[8] > 0, g[10]])]);
     if (key === this.toolKey) return;
     this.toolKey = key;
@@ -246,7 +247,8 @@ export class Match {
       RS.innerHTML = `<div class="ttl"><span>Research: one upgrade per round</span><span>${me.bought ? 'installed' : ''}</span></div><div class="cards">${me.offer.map((id) => {
         const u = UPGRADES[id];
         const owned = id in me.upgrades;
-        return `<button class="card ${owned ? 'owned' : ''}" data-research="${id}" ${me.bought || owned || me.credits < u.cost ? 'disabled' : ''}><span class="c">${u.cost} cr</span><b>${esc(u.name)}</b><br>${esc(u.blurb)}</button>`;
+        const k = me.offer.indexOf(id);
+        return `<button class="card ${owned ? 'owned' : ''} ${pad.active && k === (this.padRes || 0) % me.offer.length ? 'padsel' : ''}" data-research="${id}" ${me.bought || owned || me.credits < u.cost ? 'disabled' : ''}><span class="c">${u.cost} cr</span><b>${esc(u.name)}</b><br>${esc(u.blurb)}</button>`;
       }).join('')}</div>`;
     } else if (Object.keys(me.upgrades).length) {
       RS.innerHTML = `<div class="ttl"><span>Upgrades</span></div><div class="fine">${Object.keys(me.upgrades).map((id) => esc(UPGRADES[id].name)).join(', ')}</div>`;
@@ -278,7 +280,107 @@ export class Match {
   toast(t) { window.dispatchEvent(new CustomEvent('dh-toast', { detail: t })); }
 
   // ================================================================= frame
+  // ============================================================== controller
+  padTick(dt) {
+    if (!pad.poll()) { this.padEl && (this.padEl.style.display = 'none'); return; }
+    const snap = this.snapCur, me = snap?.players[this.me];
+    const r = this.r;
+    if (!this.padCur) {
+      const p = me || snap.players[0];
+      this.padCur = r.iso(p.rx + 1.5, p.ry + 1.5);
+    }
+    // left stick moves the cursor; right stick is a slower fine-aim
+    const [lx, ly, rx, ry] = pad.axes;
+    const fast = Math.max(r.vw, r.vh) * 0.9, fine = fast * 0.35;
+    let moved = false;
+    if (lx || ly) { this.padCur[0] += lx * fast * dt; this.padCur[1] += ly * fast * dt; moved = true; }
+    if (rx || ry) { this.padCur[0] += rx * fine * dt; this.padCur[1] += ry * fine * dt; moved = true; }
+    // d-pad steps one cell at a time (precise building)
+    const step = (dx, dy) => {
+      const [fx, fy] = r.toCell(this.padCur[0], this.padCur[1]);
+      const cx = Math.max(0, Math.min(W - 1, Math.floor(fx) + dx)), cy = Math.max(0, Math.min(H - 1, Math.floor(fy) + dy));
+      this.padCur = r.iso(cx + 0.5, cy + 0.5);
+      moved = true;
+    };
+    if (pad.repeat(BTN.UP)) step(0, -1);
+    if (pad.repeat(BTN.DOWN)) step(0, 1);
+    if (pad.repeat(BTN.LEFT)) step(-1, 0);
+    if (pad.repeat(BTN.RIGHT)) step(1, 0);
+    this.padCur[0] = Math.max(0, Math.min(r.vw, this.padCur[0]));
+    this.padCur[1] = Math.max(0, Math.min(r.vh, this.padCur[1]));
+    if (moved || pad.active) {
+      const rect = this.cv.getBoundingClientRect();
+      this.onMove({ clientX: rect.left + this.padCur[0], clientY: rect.top + this.padCur[1] });
+    }
+    if (!this.padEl) {
+      this.padEl = document.createElement('div');
+      this.padEl.id = 'pad-cursor';
+      $('#hud').appendChild(this.padEl);
+    }
+    this.padEl.style.display = pad.active ? 'block' : 'none';
+    this.padEl.style.transform = `translate(${this.padCur[0]}px, ${this.padCur[1]}px)`;
+
+    if (pad.pressed(BTN.START)) $('#h-menu').click();
+    if (pad.pressed(BTN.BACK)) this.onKey({ key: 'h', target: null, preventDefault() {} });
+    if (!snap || !me || !me.alive) return;
+    const ph = snap.phase;
+    const click = () => this.onDown({ button: 0, preventDefault() {} });
+    const unclick = () => this.onUp({ button: 0 });
+    // research: L3 picks the card, R3 buys it
+    if ((ph === 'weld' || ph === 'arm') && me.offer.length) {
+      if (pad.pressed(BTN.L3)) { this.padRes = ((this.padRes || 0) + 1) % me.offer.length; this.toolKey = null; }
+      if (pad.pressed(BTN.R3)) this.send({ t: 'research', id: me.offer[(this.padRes || 0) % me.offer.length] });
+    }
+    if (ph === 'weld') {
+      if (pad.pressed(BTN.A) || pad.pressed(BTN.RT)) click();
+      if (pad.released(BTN.A) || pad.released(BTN.RT)) unclick();
+      if (pad.pressed(BTN.X)) this.rotate();
+      if (pad.pressed(BTN.B)) this.send({ t: 'undo' });
+      if (pad.pressed(BTN.Y)) this.setTool({ mode: this.tool.mode === 'repair' ? 'piece' : 'repair' });
+      if (pad.pressed(BTN.LB) || pad.pressed(BTN.RB)) {
+        const i = PIECE_IDS.indexOf(this.tool.piece);
+        this.setTool({ mode: 'piece', piece: PIECE_IDS[(i + (pad.pressed(BTN.RB) ? 1 : PIECE_IDS.length - 1)) % PIECE_IDS.length] });
+      }
+    } else if (ph === 'arm') {
+      if (pad.pressed(BTN.A) || pad.pressed(BTN.RT)) click();
+      if (pad.pressed(BTN.B)) this.setTool({ mode: 'buy', weapon: null, gun: null });
+      if (pad.pressed(BTN.Y) && this.tool.gun) { this.send({ t: 'sellGun', id: this.tool.gun }); this.setTool({ mode: 'buy', gun: null }); }
+      if (pad.pressed(BTN.LB) || pad.pressed(BTN.RB)) {
+        const i = SHOP.indexOf(this.tool.weapon);
+        const n = pad.pressed(BTN.RB) ? (i + 1) % SHOP.length : (i <= 0 ? SHOP.length - 1 : i - 1);
+        this.setTool({ mode: 'buy', weapon: SHOP[n], gun: null });
+      }
+    } else if (ph === 'fire') {
+      if (this.tool.ability) {
+        if (pad.pressed(BTN.A) || pad.pressed(BTN.RT)) click();
+        if (pad.pressed(BTN.B)) this.setTool({ mode: 'aim', ability: null });
+      } else {
+        if (pad.pressed(BTN.RT) || pad.pressed(BTN.A)) click();
+        if ((pad.released(BTN.RT) || pad.released(BTN.A)) && !pad.down(BTN.RT) && !pad.down(BTN.A)) unclick();
+      }
+      if (pad.pressed(BTN.LB) || pad.pressed(BTN.RB)) {
+        const mine = snap.guns.filter((g) => g[1] === this.me);
+        if (mine.length) {
+          const i = mine.findIndex((g) => g[0] === me.active);
+          const g = mine[(i + (pad.pressed(BTN.RB) ? 1 : mine.length - 1)) % mine.length];
+          this.send({ t: 'active', id: g[0] });
+        }
+      }
+      if (pad.pressed(BTN.Y)) this.onKey({ key: 't', target: null, preventDefault() {} });
+      if (pad.pressed(BTN.LT)) {
+        const ready = Object.keys(me.upgrades).filter((id) => UPGRADES[id].active && id !== 'crane' && me.upgrades[id] > 0);
+        if (ready.length) {
+          this.padAb = ((this.padAb ?? -1) + 1) % ready.length;
+          const ab = ready[this.padAb];
+          if (ab === 'printer' || ab === 'dirty') { this.setTool({ mode: 'ability', ability: ab }); this.toast(`${UPGRADES[ab].name}: aim and press A`); }
+          else this.send({ t: 'ability', id: ab });
+        }
+      }
+    }
+  }
+
   frame(dt) {
+    this.padTick(dt);
     if (!this.snapCur) return;
     const alphaT = Math.min(1, (performance.now() - this.tCur) / 100);
     const snap = this.snapCur;
@@ -305,6 +407,14 @@ export class Match {
 
   contextTip() {
     const snap = this.snapCur, me = snap.players[this.me];
+    if (pad.active && me && me.alive && !this.tutorial?.text) {
+      const t = {
+        weld: 'Stick/D-pad: move · A: place · X: rotate · LB/RB: piece · B: undo · Y: repair · L3/R3: pick/buy upgrade',
+        arm: 'LB/RB: pick turret · A: place, or select one of yours then A to move it · Y: sell · B: cancel · L3/R3: upgrade',
+        fire: 'Stick: aim · RT/A: fire · LB/RB: switch gun · Y: auto-target · LT: ability · Back: flatten view',
+      }[snap.phase];
+      if (t) return this.tip(t);
+    }
     if (this.tutorial?.text) return this.tip(this.tutorial.text);
     if (!me || !me.alive || snap.phase === 'done') return this.tip('');
     if (snap.phase === 'weld') {

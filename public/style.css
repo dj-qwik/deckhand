@@ -199,3 +199,9 @@ body.no-scan #crt { display: none; }
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; display: grid; gap: 6px; pointer-events: none; }
 #toast div { background: #0f1a1c; border: 1px solid var(--amber); padding: 8px 14px; max-width: 80vw; }
 @media (prefers-reduced-motion: reduce) { .ptile .tag.bad { animation: none; } }
+
+#pad-cursor { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; pointer-events: none; display: none; z-index: 4;
+  border: 2px solid var(--amber); border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 0 12px rgba(228,155,60,.6); }
+#pad-cursor::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: var(--amber); border-radius: 50%; }
+.card.padsel { outline: 2px solid var(--amber); }
+.pad-focus { outline: 3px solid var(--amber) !important; outline-offset: 3px; }

@@ -1,5 +1,6 @@
 // App shell: screens, settings, sign-in, wallet, queue/lobby, practice, results.
 import { Match } from './match.js';
+import { pad, BTN } from './gamepad.js';
 import { Audio } from './audio.js';
 import { PERSONAS } from './crew.js';
 import { PCOL } from './render.js';
@@ -494,6 +495,7 @@ function howTo() {
   <dt>Arm</dt><dd>Pick a turret in the shop, click green floor. Click your turret, then a cell, to move it. <kbd>X</kbd> sells.</dd>
   <dt>Fire</dt><dd>Aim with the mouse, hold left click. <kbd>1</kbd>–<kbd>4</kbd>/<kbd>Tab</kbd> switch guns. Click a crew tile or <kbd>T</kbd> to focus your auto-turrets.</dd>
   <dt>Abilities</dt><dd><kbd>Q</kbd> capacitor, <kbd>V</kbd> vent, <kbd>G</kbd> foam printer, <kbd>B</kbd> dirty tricks</dd>
+  <dt>Controller</dt><dd>Stick or D-pad moves the cursor. Weld: <kbd>A</kbd> place, <kbd>X</kbd> rotate, <kbd>LB</kbd>/<kbd>RB</kbd> piece, <kbd>B</kbd> undo, <kbd>Y</kbd> repair. Arm: <kbd>LB</kbd>/<kbd>RB</kbd> turret, <kbd>A</kbd> place or move, <kbd>Y</kbd> sell. Fire: <kbd>RT</kbd> fire, right stick fine-aim, <kbd>LB</kbd>/<kbd>RB</kbd> switch gun, <kbd>Y</kbd> auto-target, <kbd>LT</kbd> ability. <kbd>L3</kbd>/<kbd>R3</kbd> pick/buy upgrade. <kbd>Back</kbd> flatten, <kbd>Start</kbd> menu.</dd>
   <dt>View</dt><dd><kbd>H</kbd> tactical flatten (low walls for precise clicking). Zoom with the wheel (<kbd>Ctrl</kbd>+wheel while welding) or <kbd>+</kbd>/<kbd>-</kbd>, pan with the middle mouse button or arrow keys, <kbd>0</kbd> resets.</dd></dl>
   <div class="row"><button class="btn" data-close>Got it</button></div>`);
 }
@@ -533,6 +535,47 @@ $('#h-menu').addEventListener('click', () => {
 });
 window.addEventListener('dhwallet', () => { if (wallet()?.address && $('#scr-hangar').classList.contains('on')) refreshBalance(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshBalance(); });
+
+// =============================================================== controller in menus
+// D-pad / left stick moves focus between buttons and fields, A presses, B backs out.
+function focusables() {
+  const root = !$('#modal').classList.contains('hidden') ? $('#modal') : document.querySelector('.screen.on');
+  if (!root) return [];
+  return [...root.querySelectorAll('button, a[href], input, select')].filter((el) => !el.disabled && el.offsetParent !== null);
+}
+function menuPad() {
+  requestAnimationFrame(menuPad);
+  if (app.match && app.match.running) return;
+  if (!pad.poll()) return;
+  const list = focusables();
+  if (!list.length) return;
+  let i = list.indexOf(document.activeElement);
+  const move = (d) => {
+    i = i < 0 ? 0 : (i + d + list.length) % list.length;
+    document.querySelectorAll('.pad-focus').forEach((el) => el.classList.remove('pad-focus'));
+    list[i].focus();
+    list[i].classList.add('pad-focus');
+    list[i].scrollIntoView?.({ block: 'nearest' });
+  };
+  const [lx, ly] = pad.axes;
+  const now = performance.now();
+  const stick = (ly > 0.6 || lx > 0.6) ? 1 : (ly < -0.6 || lx < -0.6) ? -1 : 0;
+  if (stick && now > (app.stickAt || 0)) { move(stick); app.stickAt = now + 220; }
+  if (pad.repeat(BTN.DOWN) || pad.repeat(BTN.RIGHT)) move(1);
+  if (pad.repeat(BTN.UP) || pad.repeat(BTN.LEFT)) move(-1);
+  if (pad.pressed(BTN.A)) {
+    audio.unlock();
+    const el = list[i] || list[0];
+    if (el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change', { bubbles: true })); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    else if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.focus();
+    else el.click();
+  }
+  if (pad.pressed(BTN.B)) {
+    if (!$('#modal').classList.contains('hidden')) closeModal();
+    else if ($('#scr-consent').classList.contains('on')) show('landing');
+  }
+}
+requestAnimationFrame(menuPad);
 
 boot();
 loadConfig();
