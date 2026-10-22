@@ -48,7 +48,7 @@ envVarGroups:
 
 databases:
   - name: deckhand-db
-    # free is fine for testnet; it expires after 30 days. Use a paid plan
-    # (basic-256mb or higher) before real money.
-    plan: free
+    # Paid plan: Render allows only one free database per account, and free
+    # databases expire after 30 days. Never run real money on a free one.
+    plan: basic-256mb
     postgresMajorVersion: "16"
