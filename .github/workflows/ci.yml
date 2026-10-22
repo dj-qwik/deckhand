@@ -1,0 +1,47 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --include=dev
+      - name: Build wallet bridge
+        run: npm run build
+      - name: Build unminified wallet (debug artifact)
+        run: npx vite build --config apps/wallet/vite.config.mjs --mode debug --outDir ../../dist/wallet-debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wallet-builds
+          path: dist/
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Contract tests
+        run: cd contracts && forge test -vv
+      - name: Committed escrow bytecode matches source
+        run: cd contracts && forge build && cd .. && node tools/export-escrow.mjs --check
+      - name: Determinism
+        run: node tools/determinism.mjs 6
+      - name: Bot acceptance (lazy strategies lose, all arenas)
+        run: node tools/accept.mjs all 30
+      - name: Network test
+        run: node tools/nettest.mjs
+      - name: Cash end-to-end (testnet settings)
+        run: node tools/cash-e2e.mjs
+      - name: Cash end-to-end (mainnet settings)
+        run: node tools/cash-e2e.mjs --mainnet

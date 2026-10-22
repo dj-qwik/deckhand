@@ -1,0 +1,54 @@
+# Render Blueprint for DECKHAND. New → Blueprint → pick this repo.
+# Starts on Robinhood Chain TESTNET (46630). Switch CHAIN_ID to 4663 only after
+# testnet works end to end and you've read the mainnet notes in README.md.
+services:
+  - type: web
+    name: deckhand
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CHAIN_ID
+        value: "46630"
+      - key: OWNER_ADDRESS
+        value: "0x9944eaEf8197ee5604C1063c525c71DE5D501a1D"
+      - key: PRIVY_APP_ID
+        value: "cmvjg6x5h01tl0hjw4k5g2735"
+      - key: STAKES
+        value: "0.001,0.005,0.01"
+      - key: EMBEDDED_COSIGNERS
+        value: "2"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deckhand-db
+          property: connectionString
+      - fromGroup: deckhand-secrets
+      # After the first deploy, pin these from the server log / status page so a
+      # database reset can never point the game at a new escrow:
+      # - key: ESCROW_ADDRESS
+      #   value: "0x..."
+      # - key: ESCROW_DEPLOY_BLOCK
+      #   value: "123"
+
+envVarGroups:
+  - name: deckhand-secrets
+    envVars:
+      - key: OPERATOR_SECRET
+        generateValue: true
+      - key: COSIGNER_A_SECRET
+        generateValue: true
+      - key: COSIGNER_B_SECRET
+        generateValue: true
+
+databases:
+  - name: deckhand-db
+    # free is fine for testnet; it expires after 30 days. Use a paid plan
+    # (basic-256mb or higher) before real money.
+    plan: free
+    postgresMajorVersion: "16"
