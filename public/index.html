@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DECKHAND: Zero-G Rampart</title>
+<meta name="description" content="Two rounds. Weld your walls, mount your guns, flatten the other crews. Last base standing takes the pot.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="crt" aria-hidden="true"></div>
+
+<!-- ============================== LANDING -->
+<section id="scr-landing" class="screen on">
+  <div class="boot" id="boot"></div>
+  <div class="landing">
+    <div class="logo-wrap">
+      <h1 class="logo">DECKHAND</h1>
+      <p class="sub">Zero-G Rampart</p>
+    </div>
+    <p class="pitch">Two rounds. Weld a wall around your reactor, bolt guns inside it, then flatten the other crews for 30 seconds. Twice. Most base left takes 90% of the pot.</p>
+    <div class="cta">
+      <button class="btn big" id="btn-signin">Sign in to play for ETH</button>
+      <button class="btn big ghost" id="btn-practice">Practice yard</button>
+    </div>
+    <div class="cta small">
+      <button class="link" id="btn-howto">How to play</button>
+      <button class="link" id="btn-settings">Settings</button>
+      <a class="link" href="/status" target="_blank" rel="noopener">Server status</a>
+    </div>
+    <p class="fine" id="landing-fine"></p>
+  </div>
+</section>
+
+<!-- ============================== CONSENT -->
+<section id="scr-consent" class="screen">
+  <div class="panel narrow">
+    <h2>Before you clock in</h2>
+    <p>DECKHAND matches are played for real ETH on <span data-chain-name></span>. Your sign-in signature records these two statements against your wallet.</p>
+    <label class="check"><input type="checkbox" id="c-age"> I am 21 or older and paid skill games are legal where I am.</label>
+    <label class="check"><input type="checkbox" id="c-ent"> I understand matches are for entertainment, my entry fee is at risk, and only the winner is paid.</label>
+    <div class="row">
+      <button class="btn" id="btn-consent" disabled>Sign and continue</button>
+      <button class="btn ghost" id="btn-consent-cancel">Back</button>
+    </div>
+    <p class="err" id="consent-err"></p>
+  </div>
+</section>
+
+<!-- ============================== HANGAR -->
+<section id="scr-hangar" class="screen">
+  <div class="hangar">
+    <header class="bar">
+      <div class="brand">DECKHAND</div>
+      <div class="net"><span class="dot"></span><span data-chain-name></span></div>
+      <button class="link" id="btn-signout">Sign out</button>
+    </header>
+    <div class="cols">
+      <div class="panel wallet">
+        <h3>Game wallet</h3>
+        <div class="bal"><span id="w-bal">…</span> <small>ETH</small></div>
+        <div class="addr"><code id="w-addr">0x…</code> <button class="mini" id="btn-copy">Copy</button></div>
+        <p class="hint">Add ETH by sending it to this address on <span data-chain-name></span>. Only send on this network.</p>
+        <div class="row">
+          <button class="btn ghost" id="btn-cashout">Cash out</button>
+          <button class="btn ghost" id="btn-export">Export key</button>
+        </div>
+        <div id="cashout" class="cashout hidden">
+          <label>Send to <input id="co-to" placeholder="0x… address" autocomplete="off" spellcheck="false"></label>
+          <label>Amount <input id="co-amt" placeholder="0.00" inputmode="decimal"> <button class="mini" id="co-max">Max</button></label>
+          <div class="row"><button class="btn" id="co-send">Send ETH</button><button class="btn ghost" id="co-cancel">Cancel</button></div>
+          <p class="err" id="co-err"></p>
+        </div>
+      </div>
+      <div class="panel queue">
+        <h3>Find a match</h3>
+        <label class="field">Crew name <input id="q-name" maxlength="16" autocomplete="off" spellcheck="false"></label>
+        <div class="field"><span>Entry per player</span><div class="seg" id="q-stake"></div></div>
+        <div class="field"><span>Crews per match</span><div class="seg" id="q-seats"></div></div>
+        <p class="potline" id="q-pot"></p>
+        <button class="btn big" id="btn-queue">Find match</button>
+        <p class="err" id="q-err"></p>
+        <p class="fine">Winner takes 90% of the pot, the house keeps 10%. Unfilled lobbies refund in full.</p>
+      </div>
+      <div class="panel recent">
+        <h3>Recent payouts</h3>
+        <ol id="recent"></ol>
+        <button class="btn ghost" id="btn-practice2">Practice yard</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== LOBBY -->
+<section id="scr-lobby" class="screen">
+  <div class="panel lobby">
+    <h2 id="l-title">Lobby</h2>
+    <p class="arena-line" id="l-arena"></p>
+    <ul class="seats" id="l-seats"></ul>
+    <p class="potline" id="l-pot"></p>
+    <div class="row">
+      <button class="btn big" id="btn-pay">Pay entry</button>
+      <button class="btn ghost" id="btn-leave">Leave lobby</button>
+    </div>
+    <p class="status" id="l-status"></p>
+    <p class="err" id="l-err"></p>
+  </div>
+</section>
+
+<!-- ============================== MATCH -->
+<section id="scr-match" class="screen">
+  <canvas id="view"></canvas>
+  <div id="hud">
+    <div id="h-top">
+      <div id="h-clock"><div id="h-phase">Stand by</div><div id="h-time">--</div><div id="h-round">Clocking in</div></div>
+    </div>
+    <div id="h-banner"></div>
+    <div id="h-tip"></div>
+    <div id="h-crew"></div>
+    <div id="h-dock">
+      <div id="h-left">
+        <div class="res"><span title="Scrap buys walls, repairs and turrets">Scrap <b id="h-scrap">0</b></span><span title="Credits are earned by dealing damage and buy upgrades">Credits <b id="h-cred">0</b></span><span title="Enclosed floor: more floor unlocks more turrets and scrap">Floor <b id="h-floor">0</b></span><button id="h-menu" class="mini">Menu</button></div>
+        <div id="h-tools"></div>
+      </div>
+      <div id="h-research"></div>
+      <div id="h-right"></div>
+    </div>
+  </div>
+  <div id="m-overlay" class="hidden"></div>
+</section>
+
+<!-- ============================== RESULTS -->
+<section id="scr-results" class="screen">
+  <div class="panel results">
+    <h2 id="r-title">Shift over</h2>
+    <p id="r-sub"></p>
+    <table id="r-table"></table>
+    <div id="r-pay"></div>
+    <div class="row">
+      <button class="btn big" id="btn-again">Play again</button>
+      <button class="btn ghost" id="btn-home">Back to hangar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== MODALS -->
+<div id="modal" class="modal hidden"><div class="panel" id="modal-body"></div></div>
+<div id="toast"></div>
+
+<script type="module" src="/wallet/wallet.js" onerror="window.DHWalletMissing=true"></script>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -3,6 +3,34 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "description": "DECKHAND: Zero-G Rampart. Real-money 2.5D siege game on Robinhood Chain.",
   "engines": { "node": ">=22" },
-  "scripts": {}
+  "scripts": {
+    "build": "vite build --config apps/wallet/vite.config.mjs",
+    "build:debug": "vite build --config apps/wallet/vite.config.mjs --mode debug",
+    "start": "node server/index.mjs",
+    "test": "node tools/determinism.mjs 6 && node tools/accept.mjs all 30 && node tools/nettest.mjs",
+    "test:accept": "node tools/accept.mjs all 40",
+    "test:determinism": "node tools/determinism.mjs 6",
+    "test:net": "node tools/nettest.mjs",
+    "e2e:cash": "node tools/cash-e2e.mjs",
+    "e2e:cash:mainnet": "node tools/cash-e2e.mjs --mainnet",
+    "contracts:test": "cd contracts && forge test --offline",
+    "contracts:export": "cd contracts && forge build --offline && cd .. && node tools/export-escrow.mjs",
+    "contracts:check": "cd contracts && forge build --offline && cd .. && node tools/export-escrow.mjs --check"
+  },
+  "dependencies": {
+    "@noble/curves": "1.9.7",
+    "@noble/hashes": "1.8.0",
+    "pg": "^8.13.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@privy-io/react-auth": "^3.50.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "buffer": "^6.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vite": "^6.0.0"
+  }
 }
