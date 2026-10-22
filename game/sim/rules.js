@@ -1,8 +1,8 @@
 // DECKHAND rules data. Every number the simulation uses lives here so balance
 // changes are one-line edits. All distances are in FP units (1 cell = 256).
 
-export const W = 44;
-export const H = 30;
+export const W = 48;
+export const H = 34;
 export const FP = 256;
 export const HALF = 128;
 export const TPS = 20; // authoritative ticks per second
@@ -22,7 +22,9 @@ export const PHASES = ['intro', 'weld', 'arm', 'fire', 'cease', 'done'];
 // cell and turret still standing. A destroyed reactor = out, whatever else stands.
 // Ties: reactor HP, then damage dealt to enemy reactors, then total damage dealt,
 // then a seeded draw.
-export const YARD = 12;
+export const YARD = 14;
+export const RS = 3; // reactor footprint is RS × RS cells
+export const RHALF = (RS * 256) / 2; // FP offset from reactor corner to its centre
 export const REACTOR_HP = 1000;
 export const ENCLOSED_SPLASH_MULT = 30; // % of splash an enclosed reactor takes (70% mitigation)
 export const AUTO_DELAY = Math.round(1.5 * TPS); // auto turrets wait this long into FIRE
@@ -30,22 +32,22 @@ export const AUTO_RELOAD_PCT = 160; // auto-fire reload is 1.6× slower than man
 export const AUTO_SPREAD_PCT = 250;
 export const MAX_GUNS = 4;
 export const BASE_GUNS = 2; // turret cap = BASE_GUNS + enclosed floor / TERRITORY_PER_GUN, up to MAX_GUNS
-export const TERRITORY_PER_GUN = 20;
+export const TERRITORY_PER_GUN = 24;
 export const TERRITORY_PER_SCRAP = 8; // bonus scrap per this many enclosed cells at the next build round
 export const GUN_HP = 220;
 
 // Yard origins (top-left cell) by player count. Yards sit on the map edge.
 // Seats are assigned to yards by the hidden match seed, so nobody picks a corner.
 export const YARDS = {
-  2: [[1, 9], [31, 9]],
-  3: [[1, 1], [31, 1], [1, 17], [31, 17]], // three of the four corners; the empty one is seeded
-  4: [[1, 1], [31, 1], [1, 17], [31, 17]],
+  2: [[1, 10], [33, 10]],
+  3: [[1, 1], [33, 1], [1, 19], [33, 19]], // three of the four corners; the empty one is seeded
+  4: [[1, 1], [33, 1], [1, 19], [33, 19]],
 };
 
 export const ECON = {
-  scrapStart: 36,
-  scrapPerCycle: 18,
-  scrapCap: 40,
+  scrapStart: 42,
+  scrapPerCycle: 20,
+  scrapCap: 46,
   creditsStart: 5,
   creditPerDamage: 80, // 1 credit per this much damage dealt
   creditCap: 15,

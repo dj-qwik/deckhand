@@ -5,7 +5,7 @@
 // this module just for rules/geometry helpers and preview validation; it never
 // decides damage, currency, enclosure or victory.
 import {
-  W, H, FP, HALF, TPS, CYCLES, DUR, YARD, YARDS, REACTOR_HP, ENCLOSED_SPLASH_MULT, AUTO_DELAY,
+  W, H, FP, HALF, TPS, CYCLES, DUR, YARD, YARDS, RS, RHALF, REACTOR_HP, ENCLOSED_SPLASH_MULT, AUTO_DELAY,
   AUTO_RELOAD_PCT, AUTO_SPREAD_PCT, MAX_GUNS, BASE_GUNS, TERRITORY_PER_GUN, TERRITORY_PER_SCRAP, GUN_HP, ECON, MATERIALS, PIECES, PIECE_IDS, pieceCells,
   WEAPONS, WEAPON_IDS, UPGRADES, UPGRADE_IDS,
 } from './rules.js';
@@ -76,8 +76,9 @@ export function createMatch(cfg) {
       name: String(cfg.players[s].name || `Crew ${s + 1}`).slice(0, 18),
       yard: [yx, yy],
       face,
-      rx: yx + 5,
-      ry: yy + 5,
+      // reactor sits mid-yard, nudged toward the map centre so mirrored yards match
+      rx: yx + (yx + YARD / 2 > W / 2 ? 6 : 5),
+      ry: yy + (yy + YARD / 2 > H / 2 ? 6 : 5),
       hp: REACTOR_HP,
       hpPrev: REACTOR_HP,
       alive: true,
@@ -108,15 +109,15 @@ export function createMatch(cfg) {
     };
     S.players.push(p);
     for (let y = yy; y < yy + YARD; y++) for (let x = yx; x < yx + YARD; x++) S.yardOf[y * W + x] = s;
-    for (let y = p.ry; y < p.ry + 2; y++) for (let x = p.rx; x < p.rx + 2; x++) S.reactorAt[y * W + x] = s;
+    for (let y = p.ry; y < p.ry + RS; y++) for (let x = p.rx; x < p.rx + RS; x++) S.reactorAt[y * W + x] = s;
   }
   // per-player seeded tiebreak, drawn before anything else uses the RNG
   for (const p of S.players) p.tb = rng.u32();
   arenaById(S.arenaId).init(S);
   for (const p of S.players) {
-    // starter ring of 12 braced cells around the reactor
-    for (let y = p.ry - 1; y <= p.ry + 2; y++)
-      for (let x = p.rx - 1; x <= p.rx + 2; x++) {
+    // starter ring of braced cells around the reactor
+    for (let y = p.ry - 1; y <= p.ry + RS; y++)
+      for (let x = p.rx - 1; x <= p.rx + RS; x++) {
         if (S.reactorAt[y * W + x] >= 0) continue;
         setWall(S, y * W + x, p.slot, PIECE_IDS.indexOf('brace'), PIECES.brace.hp);
       }
@@ -124,15 +125,15 @@ export function createMatch(cfg) {
     const [fx, fy] = p.face;
     // rivet sits on the side nearer the map's centre line so mirrored yards match
     if (fx) {
-      const gx = fx > 0 ? p.rx + 3 : p.rx - 2;
-      const top = p.ry + 1 < H / 2 ? 1 : 0;
-      addGun(S, p.slot, 'rivet', gx, p.ry + top);
-      addGun(S, p.slot, 'mortar', gx, p.ry + 1 - top);
+      const gx = fx > 0 ? p.rx + RS + 1 : p.rx - 2;
+      const toCentre = p.ry + 1 < H / 2 ? 2 : 0;
+      addGun(S, p.slot, 'rivet', gx, p.ry + 1);
+      addGun(S, p.slot, 'mortar', gx, p.ry + toCentre);
     } else {
-      const gy = fy > 0 ? p.ry + 3 : p.ry - 2;
-      const left = p.rx + 1 < W / 2 ? 1 : 0;
-      addGun(S, p.slot, 'rivet', p.rx + left, gy);
-      addGun(S, p.slot, 'mortar', p.rx + 1 - left, gy);
+      const gy = fy > 0 ? p.ry + RS + 1 : p.ry - 2;
+      const toCentre = p.rx + 1 < W / 2 ? 2 : 0;
+      addGun(S, p.slot, 'rivet', p.rx + 1, gy);
+      addGun(S, p.slot, 'mortar', p.rx + toCentre, gy);
     }
     p.active = S.guns.find((g) => g.owner === p.slot).id;
   }
@@ -212,8 +213,8 @@ export function recomputeEnclosure(S) {
       }
     p.territory = t;
     let exposed = false;
-    for (let y = p.ry - 1; y <= p.ry + 2 && !exposed; y++)
-      for (let x = p.rx - 1; x <= p.rx + 2; x++) if (inMap(x, y) && out[y * W + x]) { exposed = true; break; }
+    for (let y = p.ry - 1; y <= p.ry + RS && !exposed; y++)
+      for (let x = p.rx - 1; x <= p.rx + RS; x++) if (inMap(x, y) && out[y * W + x]) { exposed = true; break; }
     p.enclosed = !exposed;
   }
   S.dirtyEncl = false;
@@ -245,8 +246,8 @@ export function placementCells(S, slot, piece, x, y, rot) {
   if (piece === 'collar') {
     const p = S.players[slot];
     const cells = [];
-    for (let yy = p.ry - 1; yy <= p.ry + 2; yy++)
-      for (let xx = p.rx - 1; xx <= p.rx + 2; xx++) if (S.reactorAt[yy * W + xx] < 0) cells.push(yy * W + xx);
+    for (let yy = p.ry - 1; yy <= p.ry + RS; yy++)
+      for (let xx = p.rx - 1; xx <= p.rx + RS; xx++) if (S.reactorAt[yy * W + xx] < 0) cells.push(yy * W + xx);
     return cells;
   }
   const rel = pieceCells(piece, rot);
@@ -462,7 +463,7 @@ function ability(S, p, a) {
     p.capPending = true;
     ev(S, { e: 'ability', s: p.slot, id });
   } else if (id === 'vent') {
-    const cx = p.rx * FP + FP, cy = p.ry * FP + FP;
+    const cx = p.rx * FP + RHALF, cy = p.ry * FP + RHALF;
     const r = 4 * FP;
     let n = 0;
     for (const q of S.proj.slice()) {
@@ -672,8 +673,8 @@ function splash(S, x, y, r, amount, dtype, attacker, extra) {
   for (const p of S.players) {
     if (p.slot === attacker || !p.alive) continue;
     let best = -1;
-    for (let k = 0; k < 4; k++) {
-      const dx = cellCenter(p.rx + (k & 1)) - x, dy = cellCenter(p.ry + (k >> 1)) - y;
+    for (let k = 0; k < RS * RS; k++) {
+      const dx = cellCenter(p.rx + (k % RS)) - x, dy = cellCenter(p.ry + Math.floor(k / RS)) - y;
       const d = isqrt(dx * dx + dy * dy);
       if (best < 0 || d < best) best = d;
     }
@@ -702,14 +703,14 @@ function autoTarget(S, g) {
   }
   const mine = S.players[g.owner];
   const chosen = S.players[mine.target];
-  if (chosen && chosen.alive && chosen.slot !== g.owner) return [chosen.rx * FP + FP, chosen.ry * FP + FP];
+  if (chosen && chosen.alive && chosen.slot !== g.owner) return [chosen.rx * FP + RHALF, chosen.ry * FP + RHALF];
   // spread fire: rotate through every enemy still standing, one shot each
   // cyclic order starting after our own seat, so no seat is everyone's first target
   const foes = enemyAlive(S, g.owner).sort((a, b) => ((a.slot - g.owner + S.n) % S.n) - ((b.slot - g.owner + S.n) % S.n));
   if (!foes.length) return null;
   const q = foes[g.rr % foes.length];
   g.rr += 1;
-  return [q.rx * FP + FP, q.ry * FP + FP];
+  return [q.rx * FP + RHALF, q.ry * FP + RHALF];
 }
 
 function reloadTicks(S, g, auto) {
@@ -949,8 +950,8 @@ function killProj(S, q, why) {
 function forkliftBlocks(S, x, y, attacker) {
   for (const p of S.players) {
     if (p.slot === attacker || !p.alive || !p.forklift) continue;
-    const dx = x - (p.rx * FP + FP), dy = y - (p.ry * FP + FP);
-    if (dx * dx + dy * dy <= (5 * HALF) * (5 * HALF)) {
+    const dx = x - (p.rx * FP + RHALF), dy = y - (p.ry * FP + RHALF);
+    if (dx * dx + dy * dy <= (6 * HALF) * (6 * HALF)) {
       p.forklift = 0;
       ev(S, { e: 'forklift', s: p.slot, x, y });
       return true;

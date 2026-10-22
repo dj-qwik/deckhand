@@ -137,10 +137,10 @@ body.no-scan #crt { display: none; }
 #h-round { font-size: 12px; color: var(--ivory-dim); }
 #h-banner { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font: 700 calc(30px * var(--scale)) var(--ui); color: var(--ivory); text-align: center; pointer-events: none; text-shadow: 0 2px 0 #000, 0 0 20px rgba(0,0,0,.8); max-width: 90vw; }
 #h-banner.red { color: var(--red); }
-#h-tip { position: absolute; left: 50%; top: calc(84px * var(--scale) + 22px); transform: translateX(-50%); background: rgba(12,19,21,.92); border: 1px solid var(--amber); padding: 5px 14px; font-size: 14px; pointer-events: none; max-width: 70vw; text-align: center; }
+#h-tip { position: absolute; right: 12px; top: calc(84px * var(--scale) + 24px); background: rgba(12,19,21,.92); border: 1px solid var(--amber); padding: 6px 12px; font-size: 14px; pointer-events: none; max-width: min(360px, 28vw); text-align: left; }
 #h-tip:empty { display: none; }
-#h-crew { position: absolute; left: 50%; bottom: calc(var(--dock) + 8px); transform: translateX(-50%); font: calc(22px * var(--scale)) var(--crt); color: var(--phos); pointer-events: none; text-shadow: 0 0 6px #000, 0 0 2px #000; white-space: nowrap; }
-#hud { --dock: calc(150px * var(--scale)); }
+#h-crew { position: absolute; left: 14px; top: calc(84px * var(--scale) + 24px); font: calc(21px * var(--scale))/1.15 var(--crt); color: var(--phos); pointer-events: none; text-shadow: 0 0 6px #000, 0 0 2px #000; max-width: min(380px, 30vw); }
+#hud { --dock: calc(140px * var(--scale)); }
 #h-dock { position: absolute; left: 0; right: 0; bottom: 0; height: var(--dock); display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 1fr) minmax(280px, 520px); gap: 8px; padding: 6px 8px 8px; background: linear-gradient(180deg, rgba(14,22,24,.93), rgba(10,16,17,.98)); border-top: 1px solid #3c5257; }
 #h-dock::before { content: ''; position: absolute; left: 0; right: 0; top: -4px; height: 4px; background: repeating-linear-gradient(-45deg, var(--amber) 0 10px, #222 10px 20px); opacity: .7; }
 #h-left, #h-right, #h-research { overflow: hidden; min-width: 0; }

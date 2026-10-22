@@ -1,6 +1,6 @@
 // Practice-yard AI. Bots produce ordinary inputs (logged like a human's), so they
 // never touch simulation internals except to read state. They use their own RNG.
-import { W, H, FP, HALF, YARD, PIECES, WEAPONS, UPGRADES, MAX_GUNS, REACTOR_HP } from './rules.js';
+import { W, H, FP, HALF, YARD, RS, RHALF, PIECES, WEAPONS, UPGRADES, MAX_GUNS, REACTOR_HP } from './rules.js';
 import { checkPlacement, placementCells, gunEnclosed, gunCap } from './sim.js';
 import { makeRng } from './util.js';
 
@@ -40,7 +40,7 @@ export function botThink(S, bot) {
 
 function perimeter(S, p) {
   const [yx, yy] = p.yard;
-  let bx0 = p.rx - 1, by0 = p.ry - 1, bx1 = p.rx + 2, by1 = p.ry + 2;
+  let bx0 = p.rx - 1, by0 = p.ry - 1, bx1 = p.rx + RS, by1 = p.ry + RS;
   for (const g of S.guns) if (g.owner === p.slot) {
     bx0 = Math.min(bx0, g.x); by0 = Math.min(by0, g.y); bx1 = Math.max(bx1, g.x); by1 = Math.max(by1, g.y);
   }
@@ -159,7 +159,7 @@ function fire(S, bot, p) {
     tgt = pool[bot.rng.int(pool.length)];
     bot.target = tgt.slot;
   }
-  let ax = tgt.rx * FP + FP, ay = tgt.ry * FP + FP;
+  let ax = tgt.rx * FP + RHALF, ay = tgt.ry * FP + RHALF;
   if (bot.style !== 'lazyaim' && WEAPONS[pick.w].kind === 'direct') {
     // breach logic: aim at the weakest enemy wall cell on the way in
     const gx = cc(pick.x), gy = cc(pick.y);
@@ -181,7 +181,7 @@ function fire(S, bot, p) {
   if (!p.firing) out.push({ t: 'fire', on: true });
 
   // abilities
-  if (p.upgrades.vent > 0 && S.proj.some((q) => q.owner !== p.slot && Math.abs(q.x - (p.rx * FP + FP)) < 3 * FP && Math.abs(q.y - (p.ry * FP + FP)) < 3 * FP))
+  if (p.upgrades.vent > 0 && S.proj.some((q) => q.owner !== p.slot && Math.abs(q.x - (p.rx * FP + RHALF)) < 3 * FP && Math.abs(q.y - (p.ry * FP + RHALF)) < 3 * FP))
     out.push({ t: 'ability', id: 'vent' });
   if (p.upgrades.capacitor > 0 && bot.rng.int(10) === 0) out.push({ t: 'ability', id: 'capacitor' });
   if (p.upgrades.dirty > 0) {

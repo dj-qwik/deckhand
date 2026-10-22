@@ -494,7 +494,7 @@ function howTo() {
   <dt>Arm</dt><dd>Pick a turret in the shop, click green floor. Click your turret, then a cell, to move it. <kbd>X</kbd> sells.</dd>
   <dt>Fire</dt><dd>Aim with the mouse, hold left click. <kbd>1</kbd>–<kbd>4</kbd>/<kbd>Tab</kbd> switch guns. Click a crew tile or <kbd>T</kbd> to focus your auto-turrets.</dd>
   <dt>Abilities</dt><dd><kbd>Q</kbd> capacitor, <kbd>V</kbd> vent, <kbd>G</kbd> foam printer, <kbd>B</kbd> dirty tricks</dd>
-  <dt>View</dt><dd><kbd>H</kbd> tactical flatten (low walls for precise clicking)</dd></dl>
+  <dt>View</dt><dd><kbd>H</kbd> tactical flatten (low walls for precise clicking). Zoom with the wheel (<kbd>Ctrl</kbd>+wheel while welding) or <kbd>+</kbd>/<kbd>-</kbd>, pan with the middle mouse button or arrow keys, <kbd>0</kbd> resets.</dd></dl>
   <div class="row"><button class="btn" data-close>Got it</button></div>`);
 }
 

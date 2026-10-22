@@ -1,6 +1,6 @@
 // Match controller: receives server snapshots, drives the renderer, the HUD and
 // the player's controls, and sends inputs. The server stays authoritative.
-import { W, H, FP, TPS, DUR, CYCLES, PIECES, PIECE_IDS, pieceCells, WEAPONS, WEAPON_IDS, UPGRADES, MAX_GUNS, REACTOR_HP, ECON } from '/sim/rules.js';
+import { W, H, FP, RS, TPS, DUR, CYCLES, PIECES, PIECE_IDS, pieceCells, WEAPONS, WEAPON_IDS, UPGRADES, MAX_GUNS, REACTOR_HP, ECON } from '/sim/rules.js';
 import { ARENAS } from '/sim/arenas.js';
 import { Renderer, PCOL, glyph } from './render.js';
 import { Crew } from './crew.js';
@@ -364,14 +364,14 @@ export class Match {
     let cells;
     if (id === 'collar') {
       cells = [];
-      for (let yy = me.ry - 1; yy <= me.ry + 2; yy++) for (let xx = me.rx - 1; xx <= me.rx + 2; xx++) if (this.st.reactor[yy * W + xx] < 0) cells.push([xx, yy]);
+      for (let yy = me.ry - 1; yy <= me.ry + RS; yy++) for (let xx = me.rx - 1; xx <= me.rx + RS; xx++) if (this.st.reactor[yy * W + xx] < 0) cells.push([xx, yy]);
       const free = cells.filter(([a, b]) => this.cellFreeMine(b * W + a));
       return { cells: free.length ? free : cells, ok: free.length > 0 && me.scrap >= PIECES.collar.cost, label: `${PIECES.collar.name} ${PIECES.collar.cost}` };
     }
     cells = pieceCells(id, this.tool.rot).map(([dx, dy]) => [x + dx, y + dy]);
     const inMap = cells.every(([a, b]) => a >= 0 && b >= 0 && a < W && b < H);
     const ok = inMap && cells.every(([a, b]) => this.cellFreeMine(b * W + a)) && me.scrap >= PIECES[id].cost;
-    return { cells: cells.filter(([a, b]) => a >= 0 && b >= 0 && a < W && b < H), ok, label: '' };
+    return { cells: cells.filter(([a, b]) => a >= 0 && b >= 0 && a < W && b < H), ok, label: '', block: true };
   }
 
   gunGhost([x, y]) {
@@ -402,6 +402,10 @@ export class Match {
   }
 
   onMove(e) {
+    if (this.drag && e.clientX !== undefined) {
+      this.r.panBy(e.clientX - this.drag[0], e.clientY - this.drag[1]);
+      this.drag = [e.clientX, e.clientY];
+    }
     const rect = this.cv.getBoundingClientRect();
     const [fx, fy] = this.r.toCell(e.clientX - rect.left, e.clientY - rect.top);
     this.mouse.f = [fx, fy];
@@ -422,6 +426,7 @@ export class Match {
 
   onDown(e) {
     this.audio.unlock();
+    if (e.button === 1) { e.preventDefault?.(); this.drag = [e.clientX, e.clientY]; return; }
     const snap = this.snapCur, me = snap?.players[this.me];
     if (!me || !me.alive) return;
     const c = this.mouse.cell;
@@ -462,6 +467,7 @@ export class Match {
   }
 
   onUp(e) {
+    if (e.button === 1) { this.drag = null; return; }
     if (e.button !== 0) return;
     clearInterval(this.repairRepeat);
     if (this.mouse.down && this.snapCur?.phase === 'fire') this.send({ t: 'fire', on: false });
@@ -469,8 +475,12 @@ export class Match {
   }
 
   onWheel(e) {
-    if (this.snapCur?.phase !== 'weld') return;
     e.preventDefault();
+    if (this.snapCur?.phase !== 'weld' || e.ctrlKey || e.metaKey) {
+      const rect = this.cv.getBoundingClientRect();
+      this.r.zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - rect.left, e.clientY - rect.top);
+      return;
+    }
     const i = PIECE_IDS.indexOf(this.tool.piece);
     const n = PIECE_IDS[(i + (e.deltaY > 0 ? 1 : PIECE_IDS.length - 1)) % PIECE_IDS.length];
     this.setTool({ mode: 'piece', piece: n });
@@ -482,7 +492,11 @@ export class Match {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     const snap = this.snapCur, me = snap?.players[this.me];
     const k = e.key.toLowerCase();
-    if (k === 'h') { this.r.flatten = !this.r.flatten; this.toast(this.r.flatten ? 'Tactical flatten on' : 'Tactical flatten off'); return; }
+    if (k === 'h') { this.r.flatten = !this.r.flatten; this.r.sprites.clear(); this.toast(this.r.flatten ? 'Tactical flatten on' : 'Tactical flatten off'); return; }
+    if (k === '=' || k === '+') return this.r.zoomBy(1.15, this.r.vw / 2, this.r.vh / 2);
+    if (k === '-' || k === '_') return this.r.zoomBy(1 / 1.15, this.r.vw / 2, this.r.vh / 2);
+    if (k === '0') return this.r.resetView();
+    if (k.startsWith('arrow')) { const d = 40; this.r.panBy(k === 'arrowleft' ? d : k === 'arrowright' ? -d : 0, k === 'arrowup' ? d : k === 'arrowdown' ? -d : 0); e.preventDefault(); return; }
     if (k === 'escape') { this.setTool({ ability: null, gun: null, weapon: null, crane: null, mode: snap?.phase === 'weld' ? 'piece' : snap?.phase === 'fire' ? 'aim' : 'buy' }); return; }
     if (!me || !me.alive) return;
     if (snap.phase === 'weld') {

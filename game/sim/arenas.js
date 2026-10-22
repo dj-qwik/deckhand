@@ -36,20 +36,20 @@ export const ARENAS = [
     twist: 'TWIST: Crane drops cargo containers into the field.',
     palette: 'rust',
     init(S) {
-      for (const [x, y] of [[16, 3], [19, 7], [15, 12], [20, 13]]) mirror4(S, x, y, PROP.bollard);
-      S.arena = { boomX: 15, boomDir: 1, dropX: 0, dropY: 0, dropped: 0 };
+      for (const [x, y] of [[18, 3], [21, 8], [17, 13], [22, 15]]) mirror4(S, x, y, PROP.bollard);
+      S.arena = { boomX: 17, boomDir: 1, dropX: 0, dropY: 0, dropped: 0 };
     },
     fire(S, f, api) {
       const a = S.arena;
       if (f % 8 === 0) {
         clearKind(S, PROP.boom);
         a.boomX += a.boomDir;
-        if (a.boomX >= 28 || a.boomX <= 15) a.boomDir = -a.boomDir;
-        for (let y = 9; y <= 20; y++) setProp(S, a.boomX, y, PROP.boom);
+        if (a.boomX >= 30 || a.boomX <= 17) a.boomDir = -a.boomDir;
+        for (let y = 11; y <= 22; y++) setProp(S, a.boomX, y, PROP.boom);
       }
       if (f === TWIST_AT - WARN && !a.dropped) {
-        a.dropX = 16 + S.rng.int(5);
-        a.dropY = 4 + S.rng.int(6);
+        a.dropX = 18 + S.rng.int(5);
+        a.dropY = 4 + S.rng.int(7);
         api.warn('Cargo drop incoming', a.dropX, a.dropY, 2);
         api.warn('Cargo drop incoming', W - 2 - a.dropX, H - 1 - a.dropY, 2);
       }
@@ -74,7 +74,7 @@ export const ARENAS = [
     twist: 'TWIST: Surges speed up and burn naked reactors.',
     palette: 'green',
     init(S) {
-      for (const [x, y] of [[17, 4], [20, 10]]) {
+      for (const [x, y] of [[19, 5], [22, 12]]) {
         mirror4(S, x, y, PROP.core); mirror4(S, x + 1, y, PROP.core);
         mirror4(S, x, y + 1, PROP.core); mirror4(S, x + 1, y + 1, PROP.core);
       }
@@ -108,10 +108,10 @@ export const ARENAS = [
       clearKind(S, PROP.container);
       const a = S.arena;
       // three rows in the top half, mirrored left↔right and top↔bottom so every yard sees the same lanes
-      [4, 9, 14].forEach((y, r) => {
+      [4, 10, 15].forEach((y, r) => {
         for (let k = 0; k < 8; k++) {
           const phase = (((k - a.shift + r * 2) % 5) + 5) % 5; // 3 on, 2 off, sliding outward
-          if (phase < 3) mirror4(S, 14 + k, y, PROP.container);
+          if (phase < 3) mirror4(S, 16 + k, y, PROP.container);
         }
       });
     },
@@ -133,14 +133,14 @@ export const ARENAS = [
     twist: 'TWIST: Pressure spike. Vents burst twice as often.',
     palette: 'acid',
     init(S) {
-      for (const [x, y] of [[17, 5], [21, 11], [17, 13]]) mirror4(S, x, y, PROP.vat);
+      for (const [x, y] of [[19, 6], [23, 12], [19, 15]]) mirror4(S, x, y, PROP.vat);
       // two vents per yard, mirrored by yard orientation
       S.vents = [];
       for (const p of S.players) {
         const flipX = p.face[0] < 0 ? 1 : 0, flipY = p.face[1] < 0 ? 1 : 0;
-        for (const [lx, ly] of [[2, 2], [8, 9]]) {
-          const x = p.yard[0] + (flipX ? 11 - lx : lx);
-          const y = p.yard[1] + (flipY ? 11 - ly : ly);
+        for (const [lx, ly] of [[2, 2], [10, 11]]) {
+          const x = p.yard[0] + (flipX ? 13 - lx : lx);
+          const y = p.yard[1] + (flipY ? 13 - ly : ly);
           S.vents.push(y * W + x);
           S.ventCell[y * W + x] = 1;
         }
@@ -168,7 +168,7 @@ export const ARENAS = [
     twist: 'TWIST: Seals failing. Vents alternate and the pull doubles.',
     palette: 'cold',
     init(S) {
-      for (const [x, y] of [[18, 6], [21, 2], [16, 11]]) mirror4(S, x, y, PROP.pillar);
+      for (const [x, y] of [[20, 7], [23, 3], [18, 13]]) mirror4(S, x, y, PROP.pillar);
       S.arena = { next: 80, open: 0, until: 0, side: 1, pull: 0 };
     },
     fire(S, f, api) {
